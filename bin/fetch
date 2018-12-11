@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+import csv
+import io
+
+import click
+import requests
+import pandas
+
+
+def _fetch(url, is_csv):
+    """Fetch the provided resource, `url`.
+    """
+    r = requests.get(url, allow_redirects=True)
+    if is_csv:
+        return _read_csv(r.text)
+    return _read_xlsx(r.content)
+
+
+def _read_csv(text):
+    """Read the given string as a CSV file.
+    """
+    return pandas.read_csv(io.StringIO(text), sep=None, engine="python")
+
+
+def _read_xlsx(text):
+    """Read the given string as an .xlsx or .xls file.
+    """
+    return pandas.read_excel(io.BytesIO(text))
+
+
+@click.command()
+@click.argument("url")
+@click.argument("name")
+@click.option("--ext", help="File format to use")
+@click.version_option()
+def fetch(url, name, ext):
+    """Fetch the remote dataset and return a CSV file.
+    """
+    df = _fetch(url, "csv" in url or ext == "csv")
+    df.to_csv(name + ".csv", sep=",", encoding="utf-8", index=False)
+
+
+if __name__ == "__main__":
+    fetch()
